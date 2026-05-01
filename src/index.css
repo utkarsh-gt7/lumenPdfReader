@@ -1,0 +1,34 @@
+/* Tailwind layers — using @import (resolved by postcss-import at build time)
+   so any plain CSS linter understands the file. Equivalent to the
+   classic `@tailwind base/components/utilities` directives. */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Site chrome that doesn't need Tailwind utilities — base font stack and
+   high-quality text rendering hints. Theme colors are applied via the
+   plugin in tailwind.config.js (addBase). */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Brand-tinted text selection. */
+::selection {
+  background-color: rgba(74, 91, 243, 0.25);
+}
+.dark ::selection {
+  background-color: rgba(150, 169, 255, 0.35);
+}
