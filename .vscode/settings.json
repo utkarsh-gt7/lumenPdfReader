@@ -1,0 +1,25 @@
+{
+  "//1": "Tailwind directives like @tailwind / @apply are processed by PostCSS;",
+  "//2": "the IDE's built-in CSS linter doesn't understand them, so silence it.",
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+
+  "//3": "Use the Tailwind extension for CSS files when it is installed.",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+
+  "//4": "Disable JSON-schema fetch for vercel.json (the remote URL is blocked",
+  "//5": "in some sandboxed dev environments — the file is still validated by",
+  "//6": "Vercel itself at deploy time).",
+  "json.schemaDownload.enable": true,
+
+  "//7": "Use the workspace TypeScript so editors pick up our patched typings.",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+
+  "//8": "Don't surface the noisy 'file ignored' warning when ESLint is asked",
+  "//9": "to lint a non-source file (CSS, JSON, MD).",
+  "eslint.options": { "warnIgnored": false },
+  "eslint.validate": ["typescript", "typescriptreact", "javascript", "javascriptreact"]
+}
