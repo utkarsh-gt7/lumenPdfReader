@@ -203,7 +203,13 @@ describe('useAuthStore', () => {
       photoURL: null,
       createdAt: 0,
       onboardingShownFor: [],
-      settings: { darkMode: true, fontScale: 1 },
+      settings: {
+        theme: 'dark' as const,
+        brightness: 1,
+        focusMode: false,
+        fontFamily: 'serif' as const,
+        fontScale: 1,
+      },
     };
     useAuthStore.getState().setProfile(profile);
     expect(useAuthStore.getState().profile).toEqual(profile);

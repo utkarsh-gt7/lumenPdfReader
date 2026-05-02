@@ -392,7 +392,10 @@ describe('notes repository', () => {
 // profile.ts
 // ─────────────────────────────────────────────────────────────
 describe('profile repository', () => {
-  it('getOrCreateProfile returns an existing profile', async () => {
+  it('getOrCreateProfile returns an existing profile and migrates legacy darkMode', async () => {
+    // Legacy document: only `darkMode: false` set, no `theme`.
+    // Should be hydrated as the equivalent 'light' theme with sane defaults
+    // for everything else.
     getDocMock.mockResolvedValue({
       exists: () => true,
       data: () => ({
@@ -412,11 +415,71 @@ describe('profile repository', () => {
       photoURL: null,
     });
     expect(profile.uid).toBe('u1');
-    expect(profile.settings.darkMode).toBe(false);
+    expect(profile.settings.theme).toBe('light');
+    expect(profile.settings.fontScale).toBe(1.1);
+    expect(profile.settings.brightness).toBe(1);
+    expect(profile.settings.focusMode).toBe(false);
+    expect(profile.settings.fontFamily).toBe('serif');
     expect(profile.onboardingShownFor).toEqual(['mobile']);
   });
 
-  it('getOrCreateProfile seeds a new profile when missing', async () => {
+  it('hydrates a modern profile with explicit theme + new fields', async () => {
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        email: 'a@b.c',
+        displayName: 'A',
+        photoURL: null,
+        createdAt: 200,
+        onboardingShownFor: [],
+        settings: {
+          theme: 'paper',
+          brightness: 0.7,
+          focusMode: true,
+          fontFamily: 'sans',
+          fontScale: 1.05,
+        },
+      }),
+    });
+    const { getOrCreateProfile } = await import('@/services/repository/profile');
+    const profile = await getOrCreateProfile({
+      uid: 'u2',
+      email: 'a@b.c',
+      displayName: 'A',
+      photoURL: null,
+    });
+    expect(profile.settings).toEqual({
+      theme: 'paper',
+      brightness: 0.7,
+      focusMode: true,
+      fontFamily: 'sans',
+      fontScale: 1.05,
+    });
+  });
+
+  it('clamps out-of-range brightness and fontScale on hydrate', async () => {
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        email: null,
+        displayName: null,
+        photoURL: null,
+        createdAt: 0,
+        settings: { theme: 'paper', brightness: 5, fontScale: 0.1 },
+      }),
+    });
+    const { getOrCreateProfile } = await import('@/services/repository/profile');
+    const profile = await getOrCreateProfile({
+      uid: 'u3',
+      email: null,
+      displayName: null,
+      photoURL: null,
+    });
+    expect(profile.settings.brightness).toBeLessThanOrEqual(1);
+    expect(profile.settings.fontScale).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('getOrCreateProfile seeds a new profile with the bookish defaults', async () => {
     getDocMock.mockResolvedValue({ exists: () => false, data: () => undefined });
     const { getOrCreateProfile } = await import('@/services/repository/profile');
     const profile = await getOrCreateProfile({
@@ -426,7 +489,13 @@ describe('profile repository', () => {
       photoURL: null,
     });
     expect(setDocMock).toHaveBeenCalled();
-    expect(profile.settings).toEqual({ darkMode: true, fontScale: 1 });
+    expect(profile.settings).toEqual({
+      theme: 'paper',
+      brightness: 1,
+      focusMode: false,
+      fontFamily: 'serif',
+      fontScale: 1,
+    });
     expect(profile.onboardingShownFor).toEqual([]);
   });
 
@@ -472,10 +541,40 @@ describe('profile repository', () => {
     });
   });
 
-  it('updateSettings only patches provided keys', async () => {
+  it('updateSettings only patches provided keys (theme writes legacy darkMode too)', async () => {
     const { updateSettings } = await import('@/services/repository/profile');
-    await updateSettings('u1', { darkMode: false });
-    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { 'settings.darkMode': false });
+    await updateSettings('u1', { theme: 'light' });
+    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), {
+      'settings.theme': 'light',
+      'settings.darkMode': false,
+    });
+  });
+
+  it('updateSettings clamps brightness into the allowed range', async () => {
+    const { updateSettings } = await import('@/services/repository/profile');
+    await updateSettings('u1', { brightness: 5 });
+    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), {
+      'settings.brightness': 1,
+    });
+  });
+
+  it('updateSettings persists every supported field together', async () => {
+    const { updateSettings } = await import('@/services/repository/profile');
+    await updateSettings('u1', {
+      theme: 'dark',
+      brightness: 0.5,
+      focusMode: true,
+      fontFamily: 'sans',
+      fontScale: 1.1,
+    });
+    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), {
+      'settings.theme': 'dark',
+      'settings.darkMode': true,
+      'settings.brightness': 0.5,
+      'settings.focusMode': true,
+      'settings.fontFamily': 'sans',
+      'settings.fontScale': 1.1,
+    });
   });
 
   it('updateSettings is a no-op when called with no fields', async () => {

@@ -18,7 +18,13 @@ beforeEach(() => {
       photoURL: null,
       createdAt: 0,
       onboardingShownFor: [],
-      settings: { darkMode: true, fontScale: 1 },
+      settings: {
+        theme: 'dark',
+        brightness: 1,
+        focusMode: false,
+        fontFamily: 'serif',
+        fontScale: 1,
+      },
     },
     status: 'authenticated',
     signOut,
@@ -62,7 +68,13 @@ describe('<AppLayout />', () => {
         photoURL: null,
         createdAt: 0,
         onboardingShownFor: [],
-        settings: { darkMode: true, fontScale: 1 },
+        settings: {
+          theme: 'dark',
+          brightness: 1,
+          focusMode: false,
+          fontFamily: 'serif',
+          fontScale: 1,
+        },
       },
     });
     renderAt('/');

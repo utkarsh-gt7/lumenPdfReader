@@ -22,6 +22,35 @@ export interface NormalizedRect {
   height: number;
 }
 
+/**
+ * Visual presentation modes:
+ * - 'light' — bright daylight reading, crisp contrast.
+ * - 'paper' — Kindle-like e-ink simulation: warm cream background with a
+ *             subtle grain texture, gentler contrast, sepia-leaning ink.
+ * - 'dark'  — soft warm-grey night mode, easy on the eyes.
+ */
+export type Theme = 'light' | 'paper' | 'dark';
+
+/** Reading typeface choice. The serif option pairs Lora with Crimson Pro. */
+export type ReadingFont = 'serif' | 'sans';
+
+export const BRIGHTNESS_MIN = 0.3;
+export const BRIGHTNESS_MAX = 1;
+export const FONT_SCALE_MIN = 0.85;
+export const FONT_SCALE_MAX = 1.25;
+
+export interface UserSettings {
+  theme: Theme;
+  /** Screen-dim overlay; 1 = no dim, 0.3 = heavily dimmed. */
+  brightness: number;
+  /** When true, suppress non-critical toasts and acquire a wake-lock. */
+  focusMode: boolean;
+  /** Body font family. Reading defaults to a serif. */
+  fontFamily: ReadingFont;
+  /** UI scale (independent of in-PDF zoom). */
+  fontScale: number;
+}
+
 export interface UserProfile {
   uid: string;
   email: string | null;
@@ -30,12 +59,18 @@ export interface UserProfile {
   createdAt: number;
   /** Device types where the gesture onboarding tour has already played. */
   onboardingShownFor: DeviceType[];
-  /** UI preferences */
-  settings: {
-    darkMode: boolean;
-    fontScale: number;
-  };
+  /** UI preferences. */
+  settings: UserSettings;
 }
+
+/** Default settings — bookish-paper feel, comfortable contrast. */
+export const DEFAULT_SETTINGS: UserSettings = {
+  theme: 'paper',
+  brightness: 1,
+  focusMode: false,
+  fontFamily: 'serif',
+  fontScale: 1,
+};
 
 export interface Book {
   id: string;
