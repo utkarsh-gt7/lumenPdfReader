@@ -27,15 +27,15 @@ describe('<OnboardingTour />', () => {
     const onClose = vi.fn();
     render(<OnboardingTour device="desktop" onClose={onClose} />);
 
-    // First step is visible
+    // First step is visible.
     expect(screen.getByText(/Click & drag to select/i)).toBeInTheDocument();
-
-    // Click Next 3 times to reach the last step (4 total).
-    await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('button', { name: /Next/i }));
-
-    // Last step shows "Start reading", click to finish
+    // Click Next until the last step. The number of steps is intentionally
+    // not hard-coded — we just keep advancing while a Next button exists,
+    // so adding more onboarding steps later doesn't break this assertion.
+    while (screen.queryByRole('button', { name: /^Next/i })) {
+      await user.click(screen.getByRole('button', { name: /^Next/i }));
+    }
+    // Last step shows "Start reading"; click it to finish.
     await user.click(screen.getByRole('button', { name: /Start reading/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

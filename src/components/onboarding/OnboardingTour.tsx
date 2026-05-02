@@ -7,6 +7,9 @@ import {
   Keyboard,
   ChevronRight,
   X,
+  SunDim,
+  Maximize,
+  Focus,
 } from 'lucide-react';
 import type { DeviceType } from '@/types';
 import { cn } from '@/utils/cn';
@@ -45,6 +48,21 @@ function stepsFor(device: DeviceType): Step[] {
         title: 'Arrow keys to turn pages',
         body: '← / → moves between pages. Esc closes any drawer or selection menu.',
       },
+      {
+        icon: <Maximize className="w-6 h-6" />,
+        title: 'Press F for fullscreen',
+        body: 'Hide the browser chrome and immerse yourself in the page. Press F again or Esc to exit.',
+      },
+      {
+        icon: <Focus className="w-6 h-6" />,
+        title: 'Press Z for focus mode',
+        body: 'Mutes in-app sounds and notifications, and asks the browser to keep the screen awake while you read.',
+      },
+      {
+        icon: <SunDim className="w-6 h-6" />,
+        title: 'Brightness with [ and ]',
+        body: 'Lower with [ and raise with ]. Or hold Alt and scroll. The dim layer overlays the whole app, including the toolbar.',
+      },
     ];
   }
   return [
@@ -67,6 +85,21 @@ function stepsFor(device: DeviceType): Step[] {
       icon: <Bookmark className="w-6 h-6" />,
       title: 'Double-tap to bookmark',
       body: 'Double-tap an empty area on the page to drop a bookmark you can return to from any device.',
+    },
+    {
+      icon: <SunDim className="w-6 h-6" />,
+      title: 'Slide the right edge to dim',
+      body: 'Drag your finger up or down along the right edge of the screen to brighten or dim the page — perfect for night reading.',
+    },
+    {
+      icon: <Focus className="w-6 h-6" />,
+      title: 'Tap the focus icon for quiet',
+      body: 'The focus button in the toolbar mutes sounds and notifications and keeps the screen awake.',
+    },
+    {
+      icon: <Maximize className="w-6 h-6" />,
+      title: 'Tap fullscreen to immerse',
+      body: 'The fullscreen button hides the browser chrome so the page is all you see. Tap again to come back.',
     },
   ];
 }

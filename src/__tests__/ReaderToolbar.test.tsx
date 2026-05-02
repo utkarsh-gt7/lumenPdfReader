@@ -17,6 +17,11 @@ function setup(overrides: Partial<Parameters<typeof ReaderToolbar>[0]> = {}) {
     noteCount: 3,
     onBookmarkPage: vi.fn(),
     isCurrentPageBookmarked: false,
+    isFullscreen: false,
+    onToggleFullscreen: vi.fn(),
+    fullscreenSupported: true,
+    focusMode: false,
+    onToggleFocusMode: vi.fn(),
     ...overrides,
   };
   render(
@@ -76,5 +81,37 @@ describe('<ReaderToolbar />', () => {
     expect(useUIStore.getState().drawer).toBe('notes');
     await user.click(screen.getByRole('button', { name: /^Dictionary$/i }));
     expect(useUIStore.getState().drawer).toBe('dictionary');
+  });
+
+  it('shows the fullscreen toggle and forwards clicks', async () => {
+    const user = userEvent.setup();
+    const props = setup();
+    await user.click(screen.getByRole('button', { name: /Enter fullscreen/i }));
+    expect(props.onToggleFullscreen).toHaveBeenCalled();
+  });
+
+  it('hides the fullscreen toggle when the API is unsupported', () => {
+    setup({ fullscreenSupported: false });
+    expect(
+      screen.queryByRole('button', { name: /Enter fullscreen/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('reflects the active fullscreen state with the Exit label', () => {
+    setup({ isFullscreen: true });
+    expect(screen.getByRole('button', { name: /Exit fullscreen/i })).toBeInTheDocument();
+  });
+
+  it('shows the focus-mode toggle and forwards clicks', async () => {
+    const user = userEvent.setup();
+    const props = setup();
+    await user.click(screen.getByRole('button', { name: /Enable focus mode/i }));
+    expect(props.onToggleFocusMode).toHaveBeenCalled();
+  });
+
+  it('reflects the active focus-mode state with aria-pressed', () => {
+    setup({ focusMode: true });
+    const button = screen.getByRole('button', { name: /Disable focus mode/i });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
   });
 });

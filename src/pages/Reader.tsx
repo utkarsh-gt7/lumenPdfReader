@@ -24,7 +24,11 @@ import { usePinchZoom } from '@/hooks/usePinchZoom';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useTextSelection } from '@/hooks/useTextSelection';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { useFocusMode } from '@/hooks/useFocusMode';
+import { useBrightnessGesture } from '@/hooks/useBrightnessGesture';
 
+import { updateSettings } from '@/services/repository/profile';
 import {
   setTotalPages,
   subscribeToBook,
@@ -55,6 +59,8 @@ import { isSingleWord } from '@/utils/format';
 
 /** Ms to wait before pushing a page change to Firestore — debounces rapid swipes. */
 const PAGE_SYNC_DEBOUNCE = 700;
+/** Ms to wait before persisting a brightness gesture — handles drag flurries. */
+const BRIGHTNESS_SYNC_DEBOUNCE = 600;
 
 export default function Reader() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -160,6 +166,59 @@ export default function Reader() {
     return () => window.removeEventListener('resize', compute);
   }, [device]);
 
+  // ──────────── reading-experience hooks ────────────
+  // Fullscreen API — null target means fullscreen the whole document so
+  // the toolbar/footer come along for the ride. Toggle from the toolbar
+  // button or the F shortcut below.
+  const { isFullscreen, isSupported: fullscreenSupported, toggle: toggleFullscreen } =
+    useFullscreen(null);
+
+  // Focus mode — when on, suppresses non-error toasts (via ToastHost),
+  // mutes media, and asks the browser for a screen wake lock.
+  const focusMode = profile?.settings.focusMode ?? false;
+  useFocusMode(focusMode);
+
+  const toggleFocusMode = useCallback(() => {
+    if (!uid || !profile) return;
+    const next = !focusMode;
+    setProfile({
+      ...profile,
+      settings: { ...profile.settings, focusMode: next },
+    });
+    void updateSettings(uid, { focusMode: next }).catch((err) => {
+      console.warn('[Reader] persist focusMode failed:', err);
+    });
+  }, [uid, profile, focusMode, setProfile]);
+
+  // Brightness — read the live value from the store; persist on a debounce
+  // so a touch-drag doesn't blast Firestore with a write per frame.
+  const brightnessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleBrightness = useCallback(
+    (next: number) => {
+      if (!uid || !profile) return;
+      // Optimistic local update so the overlay tracks the gesture in real time.
+      setProfile({
+        ...profile,
+        settings: { ...profile.settings, brightness: next },
+      });
+      if (brightnessTimer.current) clearTimeout(brightnessTimer.current);
+      brightnessTimer.current = setTimeout(() => {
+        void updateSettings(uid, { brightness: next });
+      }, BRIGHTNESS_SYNC_DEBOUNCE);
+    },
+    [uid, profile, setProfile],
+  );
+  useBrightnessGesture({
+    read: () => useAuthStore.getState().profile?.settings.brightness ?? 1,
+    write: handleBrightness,
+  });
+  useEffect(
+    () => () => {
+      if (brightnessTimer.current) clearTimeout(brightnessTimer.current);
+    },
+    [],
+  );
+
   // ──────────── gestures & shortcuts ────────────
   usePinchZoom(containerRef, () => useUIStore.getState().zoom, setZoom);
 
@@ -189,6 +248,8 @@ export default function Reader() {
     Minus: () => bumpZoom(-0.1),
     Zero: resetZoom,
     B: () => void toggleBookmarkOnCurrentPage(),
+    F: () => void toggleFullscreen(),
+    Z: () => toggleFocusMode(),
     Escape: () => closeDrawer(),
   });
 
@@ -308,6 +369,11 @@ export default function Reader() {
         noteCount={notes.length}
         onBookmarkPage={() => void toggleBookmarkOnCurrentPage()}
         isCurrentPageBookmarked={Boolean(currentPageBookmark)}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => void toggleFullscreen()}
+        fullscreenSupported={fullscreenSupported}
+        focusMode={focusMode}
+        onToggleFocusMode={toggleFocusMode}
       />
 
       <div

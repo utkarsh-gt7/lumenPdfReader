@@ -8,7 +8,12 @@ export interface KeyHandlers {
   Plus?: () => void;
   Minus?: () => void;
   Zero?: () => void;
+  /** B — toggle bookmark on the current page. */
   B?: () => void;
+  /** F — toggle Fullscreen API on the document root. */
+  F?: () => void;
+  /** Z — toggle Focus mode (mute toasts + sounds, hold wake-lock). */
+  Z?: () => void;
   Escape?: () => void;
 }
 
@@ -51,6 +56,14 @@ export function useKeyboardShortcuts(handlers: KeyHandlers): void {
         case 'b':
         case 'B':
           if (!e.metaKey && !e.ctrlKey) handlers.B?.();
+          break;
+        case 'f':
+        case 'F':
+          if (!e.metaKey && !e.ctrlKey) handlers.F?.();
+          break;
+        case 'z':
+        case 'Z':
+          if (!e.metaKey && !e.ctrlKey) handlers.Z?.();
           break;
         case 'Escape':
           handlers.Escape?.();

@@ -1,5 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Highlighter, NotebookPen, Library, BookA } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bookmark,
+  Highlighter,
+  NotebookPen,
+  Library,
+  BookA,
+  Maximize,
+  Minimize,
+  Focus,
+} from 'lucide-react';
 import { useUIStore, type ReaderDrawer } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
 
@@ -10,6 +20,16 @@ interface ReaderToolbarProps {
   noteCount: number;
   onBookmarkPage: () => void;
   isCurrentPageBookmarked: boolean;
+  /** Whether the page is currently in fullscreen mode. */
+  isFullscreen: boolean;
+  /** Toggle the Fullscreen API. Disabled silently in unsupported browsers. */
+  onToggleFullscreen: () => void;
+  /** Whether focus mode is currently active. */
+  focusMode: boolean;
+  /** Toggle focus mode (mutes toasts + sounds, holds wake lock). */
+  onToggleFocusMode: () => void;
+  /** Hide the Fullscreen button when the API is unsupported. */
+  fullscreenSupported: boolean;
 }
 
 export default function ReaderToolbar({
@@ -19,6 +39,11 @@ export default function ReaderToolbar({
   noteCount,
   onBookmarkPage,
   isCurrentPageBookmarked,
+  isFullscreen,
+  onToggleFullscreen,
+  focusMode,
+  onToggleFocusMode,
+  fullscreenSupported,
 }: ReaderToolbarProps) {
   const drawer = useUIStore((s) => s.drawer);
   const openDrawer = useUIStore((s) => s.openDrawer);
@@ -48,6 +73,39 @@ export default function ReaderToolbar({
       </div>
 
       <div className="flex-1" />
+
+      {/* Focus mode quick-toggle. Highlighted while active. */}
+      <button
+        type="button"
+        onClick={onToggleFocusMode}
+        aria-pressed={focusMode}
+        aria-label={focusMode ? 'Disable focus mode' : 'Enable focus mode'}
+        title={
+          focusMode
+            ? 'Focus mode: on — sounds + toasts muted (Z to toggle)'
+            : 'Focus mode (Z) — mutes sounds + non-critical toasts'
+        }
+        className={cn(
+          'p-1.5 rounded-md hover:bg-white/10',
+          focusMode && 'bg-amber-500/15 text-amber-300',
+        )}
+      >
+        <Focus className="w-4 h-4" />
+      </button>
+
+      {/* Fullscreen toggle. Only shown when the API is available. */}
+      {fullscreenSupported && (
+        <button
+          type="button"
+          onClick={onToggleFullscreen}
+          aria-pressed={isFullscreen}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          title={isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
+          className="p-1.5 rounded-md hover:bg-white/10"
+        >
+          {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+        </button>
+      )}
 
       <button
         type="button"

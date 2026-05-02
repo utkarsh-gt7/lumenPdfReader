@@ -12,6 +12,8 @@ import { isFirebaseConfigured, missingFirebaseConfig } from '@/services/firebase
 import { useAuthStore } from '@/store/useAuthStore';
 import SetupRequired from '@/components/SetupRequired';
 import LoadingSplash from '@/components/LoadingSplash';
+import BrightnessOverlay from '@/components/BrightnessOverlay';
+import { DEFAULT_SETTINGS } from '@/types';
 import type { ReactNode } from 'react';
 
 function Guarded({ label, children }: { label: string; children: ReactNode }) {
@@ -28,11 +30,46 @@ export default function App() {
     return init();
   }, [init]);
 
-  // Sync `dark` class on <html> to the user's preference.
+  /**
+   * Sync the user's presentation settings onto the document root:
+   *
+   *   - `data-theme="light|paper|dark"` powers the `paper:` / `light:`
+   *     custom Tailwind variants and theme-specific base styles.
+   *   - `class="dark"` is kept in sync for the dark theme so existing
+   *     `dark:*` Tailwind utilities keep working unchanged.
+   *   - `--font-scale`, `--brightness`, `--reading-font-family` CSS vars
+   *     drive the global typography + brightness overlay.
+   *
+   * All four are derived from one settings object, so the visual state of
+   * the app and the persisted profile can never disagree.
+   */
   useEffect(() => {
-    const dark = profile?.settings.darkMode ?? true;
-    document.documentElement.classList.toggle('dark', dark);
-  }, [profile?.settings.darkMode]);
+    const settings = profile?.settings ?? DEFAULT_SETTINGS;
+    const root = document.documentElement;
+
+    root.dataset.theme = settings.theme;
+    root.classList.toggle('dark', settings.theme === 'dark');
+
+    root.style.setProperty('--font-scale', String(settings.fontScale));
+    root.style.setProperty('--brightness', String(settings.brightness));
+    root.style.setProperty(
+      '--reading-font-family',
+      settings.fontFamily === 'sans'
+        ? "'Inter', system-ui, -apple-system, sans-serif"
+        : "'Lora', Charter, Georgia, Cambria, serif",
+    );
+    // Subscribing to each scalar field individually is intentional —
+    // the eslint plugin can't see through optional chaining and would
+    // otherwise want the whole `profile?.settings` object as a dep,
+    // which would re-run this effect on any unrelated settings change
+    // (e.g. focusMode toggling), causing flicker on the brightness var.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    profile?.settings.theme,
+    profile?.settings.fontScale,
+    profile?.settings.brightness,
+    profile?.settings.fontFamily,
+  ]);
 
   if (!isFirebaseConfigured()) {
     return <SetupRequired missing={missingFirebaseConfig()} />;
@@ -44,6 +81,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {/* Global screen-dim overlay; reads --brightness from the document root. */}
+      <BrightnessOverlay />
       <Routes>
         <Route
           path="/login"
