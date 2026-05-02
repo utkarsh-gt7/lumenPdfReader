@@ -1,0 +1,19 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://localhost:4173",
+      "https://lumenpdfreader.firebaseapp.com",
+      "https://lumenpdfreader.web.app"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Accept-Ranges",
+      "Authorization"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
