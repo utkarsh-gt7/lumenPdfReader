@@ -48,6 +48,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// Silence the deliberate console.error breadcrumbs the store emits whenever
+// a sign-in throws — several tests below intentionally reject the Firebase
+// mock and would otherwise fill the test output with noise.
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
+});
+
 describe('readableAuthError', () => {
   it.each([
     ['auth/invalid-credential', /incorrect/],
@@ -56,7 +67,13 @@ describe('readableAuthError', () => {
     ['auth/email-already-in-use', /already exists/],
     ['auth/weak-password', /stronger password/],
     ['auth/popup-closed-by-user', /cancelled/],
+    ['auth/cancelled-popup-request', /cancelled/],
+    ['auth/popup-blocked', /popup/],
+    ['auth/unauthorized-domain', /Authorized domains/],
+    ['auth/operation-not-allowed', /disabled/],
+    ['auth/account-exists-with-different-credential', /already exists/],
     ['auth/network-request-failed', /Network/],
+    ['auth/too-many-requests', /Too many/],
     ['auth/some-future-code', /Sign-in failed/],
     [undefined, /Sign-in failed/],
   ])('translates %s into a friendly message', (code, pattern) => {
@@ -141,6 +158,24 @@ describe('useAuthStore', () => {
     signInWithPopupMock.mockRejectedValue({ code: 'auth/popup-closed-by-user' });
     await expect(useAuthStore.getState().signInWithGoogle()).rejects.toThrow(/cancelled/);
     expect(useAuthStore.getState().error).toMatch(/cancelled/);
+  });
+
+  it('signInWithGoogle surfaces the unauthorized-domain error with an actionable hint', async () => {
+    signInWithPopupMock.mockRejectedValue({
+      code: 'auth/unauthorized-domain',
+      message: 'This domain is not authorized to run this operation.',
+    });
+    await expect(useAuthStore.getState().signInWithGoogle()).rejects.toThrow(
+      /Authorized domains/,
+    );
+    expect(useAuthStore.getState().error).toMatch(/Authorized domains/);
+    // The original Firebase error is preserved in DevTools so unknown codes
+    // are debuggable in production even when the user only sees the toast.
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[auth:signInWithGoogle]',
+      'auth/unauthorized-domain',
+      expect.stringContaining('not authorized'),
+    );
   });
 
   it('signInWithEmail forwards to Firebase', async () => {

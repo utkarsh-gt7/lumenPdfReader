@@ -44,12 +44,33 @@ function readableAuthError(code: string | undefined): string {
     case 'auth/weak-password':
       return 'Please choose a longer, stronger password (at least 6 characters).';
     case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
       return 'Sign-in was cancelled.';
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the sign-in popup. Allow popups for this site and try again.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorised for sign-in. Add it under Firebase Authentication → Settings → Authorized domains.';
+    case 'auth/operation-not-allowed':
+      return 'This sign-in method is disabled. Enable it under Firebase Authentication → Sign-in method.';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with that email under a different sign-in provider.';
     case 'auth/network-request-failed':
       return 'Network error. Check your connection and try again.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a moment and try again.';
     default:
       return 'Sign-in failed. Please try again.';
   }
+}
+
+/**
+ * Log the original Firebase error to the console so unknown codes are
+ * still discoverable in production via DevTools, even though the user
+ * sees the friendly fallback toast.
+ */
+function logFirebaseAuthError(scope: string, err: unknown): void {
+  const e = err as { code?: string; message?: string };
+  console.error(`[auth:${scope}]`, e?.code ?? '(no code)', e?.message ?? err);
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -90,6 +111,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
     } catch (err) {
+      logFirebaseAuthError('signInWithGoogle', err);
       const code = (err as { code?: string }).code;
       const message = readableAuthError(code);
       set({ error: message });
@@ -102,6 +124,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
     } catch (err) {
+      logFirebaseAuthError('signInWithEmail', err);
       const code = (err as { code?: string }).code;
       const message = readableAuthError(code);
       set({ error: message });
@@ -117,6 +140,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await fbUpdateProfile(cred.user, { displayName });
       }
     } catch (err) {
+      logFirebaseAuthError('signUpWithEmail', err);
       const code = (err as { code?: string }).code;
       const message = readableAuthError(code);
       set({ error: message });
