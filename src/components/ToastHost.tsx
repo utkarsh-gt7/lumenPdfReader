@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { dismissToast, subscribeToasts, type Toast } from '@/services/notifier';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/utils/cn';
 
 const ICONS: Record<Toast['tone'], typeof CheckCircle2> = {
@@ -25,10 +26,15 @@ const TONE_STYLES: Record<Toast['tone'], string> = {
  */
 export default function ToastHost() {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const focusMode = useAuthStore((s) => s.profile?.settings.focusMode ?? false);
 
   useEffect(() => subscribeToasts(setToasts), []);
 
-  if (toasts.length === 0) return null;
+  // Focus mode silences non-critical toasts. Errors still surface so the
+  // user is never left wondering why something didn't work.
+  const visible = focusMode ? toasts.filter((t) => t.tone === 'error') : toasts;
+
+  if (visible.length === 0) return null;
 
   return (
     <div
@@ -39,7 +45,7 @@ export default function ToastHost() {
       role="status"
       aria-live="polite"
     >
-      {toasts.map((t) => {
+      {visible.map((t) => {
         const Icon = ICONS[t.tone];
         return (
           <div
