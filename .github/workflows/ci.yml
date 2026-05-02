@@ -91,14 +91,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR (and OCI in general) requires the repository portion of an image
+      # tag to be lowercase. github.repository preserves the original casing
+      # of the repo name (e.g. "Owner/lumenPdfReader"), so we normalise it
+      # once here and reference it from the tags below.
+      - name: Compute lowercase image name
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ steps.image.outputs.name }}:latest
+            ghcr.io/${{ steps.image.outputs.name }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
