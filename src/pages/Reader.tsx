@@ -384,12 +384,22 @@ export default function Reader() {
           <Document
             file={book.downloadUrl}
             onLoadSuccess={handlePdfLoadSuccess}
+            // PDF.js wraps the underlying fetch/XHR error and re-throws it
+            // here. We log the original message to the console so a CORS
+            // rejection vs. a 403 from Storage Rules vs. a real network
+            // failure is distinguishable in DevTools — otherwise every
+            // failure looked identical to the user.
+            onLoadError={(err) => {
+              console.error('[reader:pdf-load]', err?.name, err?.message, err);
+            }}
             loading={<LoadingSplash label="Fetching pages…" />}
             error={
               <div className="card p-6 text-ink-900 dark:text-ink-100 max-w-sm mx-auto">
                 <p className="font-medium">Couldn't load this PDF.</p>
                 <p className="text-sm text-ink-500 dark:text-ink-400 mt-1">
-                  The download URL may have expired. Try going back and reopening.
+                  Check your connection and try reopening the book. If the
+                  problem persists, the browser console has the underlying
+                  error.
                 </p>
               </div>
             }

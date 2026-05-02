@@ -4,7 +4,8 @@
       "http://localhost:5173",
       "http://localhost:4173",
       "https://lumenpdfreader.firebaseapp.com",
-      "https://lumenpdfreader.web.app"
+      "https://lumenpdfreader.web.app",
+      "https://lumen-pdf-reader.vercel.app"
     ],
     "method": ["GET", "HEAD"],
     "responseHeader": [
