@@ -1,3 +1,10 @@
+/* Reading-optimised typography from Google Fonts.
+   - Lora        : humanist serif tuned for long-form on-screen prose.
+   - Crimson Pro : transitional serif for headings — bookish + chiselled.
+   - Inter       : modern sans for UI chrome (buttons, labels, toolbar).
+   The `display=swap` directive avoids a FOIT (flash of invisible text). */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+
 /* Tailwind layers — using @import (resolved by postcss-import at build time)
    so any plain CSS linter understands the file. Equivalent to the
    classic `@tailwind base/components/utilities` directives. */
@@ -5,9 +12,26 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* Site chrome that doesn't need Tailwind utilities — base font stack and
-   high-quality text rendering hints. Theme colors are applied via the
-   plugin in tailwind.config.js (addBase). */
+/*
+ * CSS custom properties driven by the user's settings. Updated from
+ * App.tsx whenever `useAuthStore.profile.settings` changes — keeping
+ * the source of truth in one place.
+ */
+:root {
+  /* Multiplied into html { font-size } for global UI scaling. */
+  --font-scale: 1;
+  /* 0..1 — drives the BrightnessOverlay's opacity (1 = no dim). */
+  --brightness: 1;
+  /* Body / prose font, swapped between Lora (serif) and Inter (sans). */
+  --reading-font-family: 'Lora', Charter, Georgia, Cambria, serif;
+}
+
+html {
+  /* 16px is the Tailwind default rem base. Multiplying it scales every
+     `text-*` utility in the tree without us having to override each one. */
+  font-size: calc(16px * var(--font-scale));
+}
+
 html,
 body,
 #root {
@@ -23,12 +47,35 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Smooth theme transitions so flipping Light → Paper → Dark is gentle. */
+  transition:
+    background-color 250ms ease,
+    color 250ms ease;
 }
 
-/* Brand-tinted text selection. */
+/* The reading surface in Notes/Settings/drawers picks the user's chosen
+   font family via this class (mapped from `font-reading` Tailwind utility
+   to the CSS var). Headings always use Crimson Pro for visual hierarchy. */
+.font-reading {
+  font-family: var(--reading-font-family);
+  letter-spacing: 0.005em;
+}
+
+/* Brand-tinted text selection — softens to sepia in paper mode. */
 ::selection {
   background-color: rgba(74, 91, 243, 0.25);
 }
 .dark ::selection {
   background-color: rgba(150, 169, 255, 0.35);
+}
+[data-theme='paper'] ::selection {
+  background-color: rgba(168, 138, 91, 0.35);
+}
+
+/* Brightness overlay — opacity computed from the --brightness var.
+   Lives here (rather than as inline style) so jsdom's typed-property
+   normaliser doesn't drop the calc() value during component tests. */
+.brightness-overlay {
+  opacity: calc(1 - var(--brightness, 1));
+  transition: opacity 200ms ease-out;
 }
