@@ -119,10 +119,58 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Pull production environment from Vercel
+      # Fail loudly if a required build secret is missing, instead of shipping
+      # a silently-misconfigured bundle that renders the "Firebase configuration
+      # required" screen in production.
+      - name: Verify required build secrets are present
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: |
+          missing=0
+          for key in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN \
+                     VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET \
+                     VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing GitHub Actions secret: $key"
+              missing=1
+            fi
+          done
+          [ $missing -eq 0 ] || exit 1
+
+      # vercel pull is still needed to fetch .vercel/project.json (the org +
+      # project IDs that vercel build/deploy operate on). The env file it also
+      # writes (.vercel/.env.production.local) is *deliberately overwritten*
+      # in the next step — GitHub Actions secrets are the single source of
+      # truth for build-time config, so we never have to keep two dashboards
+      # (GH + Vercel) in sync.
+      - name: Pull Vercel project metadata
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Inject build secrets from GitHub
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: |
+          mkdir -p .vercel
+          {
+            printf 'VITE_FIREBASE_API_KEY=%s\n'             "$VITE_FIREBASE_API_KEY"
+            printf 'VITE_FIREBASE_AUTH_DOMAIN=%s\n'         "$VITE_FIREBASE_AUTH_DOMAIN"
+            printf 'VITE_FIREBASE_PROJECT_ID=%s\n'          "$VITE_FIREBASE_PROJECT_ID"
+            printf 'VITE_FIREBASE_STORAGE_BUCKET=%s\n'      "$VITE_FIREBASE_STORAGE_BUCKET"
+            printf 'VITE_FIREBASE_MESSAGING_SENDER_ID=%s\n' "$VITE_FIREBASE_MESSAGING_SENDER_ID"
+            printf 'VITE_FIREBASE_APP_ID=%s\n'              "$VITE_FIREBASE_APP_ID"
+          } > .vercel/.env.production.local
 
       - name: Build for Vercel
         run: vercel build --prod --token="$VERCEL_TOKEN"
